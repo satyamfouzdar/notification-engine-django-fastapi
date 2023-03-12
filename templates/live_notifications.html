@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notifications</title>
+    <script>
+        // Define the WebSocket connection URL
+        const USER_ID = {{user_id}}
+        const socket = new WebSocket(`ws://${window.location.host}/api/v1/notifications/ws/${USER_ID}`);
+        // Define the function to handle incoming messages
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const message = data.message;
+            const notificationId = data.notificationId;
+            const notificationList = document.getElementById("notifications");
+            const notification = document.createElement("li");
+            const readButton = document.createElement("button");
+            // Set the button's text content
+            readButton.textContent = 'Read';
+            readButton.id = "button" + data.notificationId;
+            readButton.onclick = function() {
+               readNotification(notificationId);
+             };
+            notification.innerText = message;
+            notification.id = notificationId;
+            notificationList.appendChild(notification);
+            notificationList.appendChild(readButton);
+        };
+
+        function readNotification(notification_id) {
+         // Make an API call to mark the notification as read
+         fetch(`http://127.0.0.1:8000/api/v1/notifications/read_notification/${notification_id}/`, {
+           method: 'PUT',
+         })
+           .then(response => {
+             if (!response.ok) {
+               throw new Error('Failed to mark notification as read');
+             }
+
+             // Make sure to delete the notification that was marked as read.
+             const readNotification = document.getElementById(notification_id)
+             const readButton = document.getElementById("button" + notification_id)
+
+             if (readNotification){
+               readNotification.remove();
+             }
+
+             if (readButton){
+               readButton.remove();
+             }
+             console.log(`Notification ${notification_id} marked as read`);
+
+           })
+           .catch(error => {
+             console.error(error);
+           });
+       }
+    </script>
+</head>
+<body>
+    <h1>Notifications</h1>
+    <ul id="notifications">
+      {% for notification_id, message in notifications.items() %}
+      <li id="{{notification_id}}">{{message}}</li>
+      <button onclick="readNotification({{notification_id}})" id="button{{notification_id}}">Read</button>
+      {% endfor %}
+    </ul>
+</body>
+</html>
